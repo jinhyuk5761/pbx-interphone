@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  activity_main.xml — 메인 화면의 '레이아웃(생김새)'.
+  XML 로 화면에 어떤 요소(글자/버튼/입력칸)를 어떻게 배치할지 그립니다.
+  코드(MainActivity.kt)에서는 android:id 로 각 요소를 찾아 글자/동작을 연결합니다.
+
+  LinearLayout(vertical) = 자식들을 '세로로 차례차례' 쌓는 배치.
+-->
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center_horizontal"
+    android:padding="24dp">
+
+    <!-- 제목 -->
+    <TextView
+        android:id="@+id/titleText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="32dp"
+        android:text="사무실 인터폰"
+        android:textSize="28sp"
+        android:textStyle="bold" />
+
+    <!-- 내 내선번호 표시 (코드에서 "내선 103 -> 서버" 로 갱신) -->
+    <TextView
+        android:id="@+id/extText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="내선 103"
+        android:textSize="16sp" />
+
+    <!-- 등록 상태 표시 (등록됨/등록중/실패 등) -->
+    <TextView
+        android:id="@+id/statusText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="상태: -"
+        android:textSize="14sp" />
+
+    <!-- 내선번호 변경 버튼 (테두리만 있는 스타일) -->
+    <Button
+        android:id="@+id/changeNumberButton"
+        style="?attr/materialButtonOutlinedStyle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="내선번호 변경"
+        android:textSize="13sp" />
+
+    <!-- 구분선 -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginVertical="24dp"
+        android:background="#33888888" />
+
+    <!-- 상대 내선번호 입력칸 (숫자 키패드, 기본값 101) -->
+    <EditText
+        android:id="@+id/targetInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="상대 내선번호 (예: 101)"
+        android:inputType="number"
+        android:text="101"
+        android:textSize="20sp"
+        android:gravity="center" />
+
+    <!-- 통화(발신) 버튼 -->
+    <Button
+        android:id="@+id/callButton"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:layout_marginTop="16dp"
+        android:text="📞 통화"
+        android:textSize="18sp" />
+
+    <!-- 통화 상태 안내문구 (발신 중 / 통화 중 / 통화 종료 등) -->
+    <TextView
+        android:id="@+id/callStateText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="32dp"
+        android:text=""
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:gravity="center" />
+
+    <!-- 받기/끊기 버튼 (가로로 반반; 평소엔 숨김 visibility=gone, 통화 상태에 따라 코드가 보여줌) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/acceptButton"
+            android:layout_width="0dp"
+            android:layout_height="64dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="8dp"
+            android:text="받기"
+            android:textSize="18sp"
+            android:visibility="gone" />
+
+        <Button
+            android:id="@+id/hangupButton"
+            android:layout_width="0dp"
+            android:layout_height="64dp"
+            android:layout_weight="1"
+            android:text="끊기"
+            android:textSize="18sp"
+            android:visibility="gone" />
+    </LinearLayout>
+
+</LinearLayout>

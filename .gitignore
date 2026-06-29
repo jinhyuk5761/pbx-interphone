@@ -1,0 +1,45 @@
+# ============================================================
+#  비밀 파일 — 절대 업로드 금지 (유출 시 위험)
+# ============================================================
+# Firebase 서비스계정(관리자) 키 — 서버 전체 권한
+*firebase-adminsdk*.json
+pbx-5017e-firebase-adminsdk-fbsvc-*.json
+# 앱 서명 키 / 비밀번호
+*.jks
+*.keystore
+keystore.properties
+# Firebase 클라이언트 설정 (각자 본인 것 사용)
+google-services.json
+
+# ============================================================
+#  런타임 데이터 / 로그 (등록부·기기배정·FCM토큰·로그)
+# ============================================================
+*.log
+pbx_registrar.json
+pbx_devices.json
+pbx_tokens.json
+dist/pbx_registrar.json
+dist/pbx_devices.json
+dist/pbx_tokens.json
+
+# ============================================================
+#  빌드 산출물 / 대용량 / 임시
+# ============================================================
+# PyInstaller
+build/
+*.spec
+dist/pbx_gui.exe
+__pycache__/
+# Android / Gradle
+interphone/.gradle/
+interphone/.kotlin/
+interphone/build/
+interphone/app/build/
+interphone/local.properties
+*.iml
+.idea/
+captures/
+.cxx/
+
+# Claude Code 설정
+.claude/

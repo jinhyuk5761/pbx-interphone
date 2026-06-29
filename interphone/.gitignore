@@ -1,0 +1,13 @@
+# Gradle / Android
+.gradle/
+build/
+local.properties
+*.iml
+.idea/
+captures/
+.cxx/
+
+# 서명 관련 — 절대 커밋 금지!
+keystore.properties
+*.jks
+*.keystore

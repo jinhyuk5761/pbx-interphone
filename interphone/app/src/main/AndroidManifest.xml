@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  AndroidManifest.xml — 앱의 '신분증/설계도'.
+  앱 이름, 아이콘, 필요한 권한, 그리고 어떤 화면(Activity)/서비스(Service)가 있는지를
+  안드로이드 시스템에 알려줍니다. 여기 등록 안 된 화면/서비스는 실행할 수 없습니다.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- ===== 권한(permissions): 이 앱이 쓰겠다고 미리 선언하는 기능들 ===== -->
+    <uses-permission android:name="android.permission.INTERNET" />            <!-- 네트워크 통신 -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" /><!-- 네트워크 상태 확인 -->
+    <!-- 통화용 — 마이크는 '위험 권한'이라 실행 중 사용자에게 따로 허용을 받아야 함(런타임 요청) -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+
+    <!-- 수신 팝업 / 알림 / 진동 (상시 포그라운드 서비스는 제거함 — 전화 수신은 FCM 푸시로) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />        <!-- 알림 표시(안드 13+) -->
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />    <!-- 잠금화면 위 전체화면 -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" /><!-- 절전 예외 -->
+    <uses-permission android:name="android.permission.VIBRATE" />                   <!-- 진동 -->
+
+    <!--
+      application: 앱 본체 설정
+        android:name=".InterphoneApp"  -> 시작 시 가장 먼저 실행될 Application 클래스
+        android:usesCleartextTraffic="true" -> 평문 http 허용(우리 PBX 의 8088 조회 API 가 http 라서)
+        android:theme/icon/label -> 테마/아이콘/앱이름
+    -->
+    <application
+        android:name=".InterphoneApp"
+        android:allowBackup="true"
+        android:icon="@drawable/ic_launcher"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:usesCleartextTraffic="true"
+        android:theme="@style/Theme.Interphone">
+
+        <!-- 메인 화면. intent-filter(MAIN/LAUNCHER) 가 있어 '앱 서랍의 실행 아이콘'이 됨 -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!--
+          수신 전화 전체화면.
+            showWhenLocked/turnScreenOn -> 잠금화면 위에 뜨고 꺼진 화면을 켬
+            singleInstance/excludeFromRecents -> 한 개만 뜨고 최근앱 목록엔 안 남김
+        -->
+        <activity
+            android:name=".IncomingCallActivity"
+            android:exported="false"
+            android:launchMode="singleInstance"
+            android:excludeFromRecents="true"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:theme="@style/Theme.Interphone" />
+
+        <!--
+          FCM 수신 서비스.
+          intent-filter 의 MESSAGING_EVENT 가 있어야 Firebase 푸시가 이 서비스로 전달됨.
+        -->
+        <service
+            android:name=".FcmService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
+    </application>
+
+</manifest>

@@ -1,0 +1,2 @@
+# GUI 관리 콘솔용 의존성. SIP 서버만 쓸 경우(step3_proxy.py)엔 불필요.
+PySide6>=6.6
