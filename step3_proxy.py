@@ -602,6 +602,43 @@ def lookup_alive(ext):
         return dict(reg)                # 복사본 반환(밖에서 안전하게 사용)
 
 
+def send_nonok_ack(sock, st, resp):
+    """
+    실패응답(3xx~6xx, 예: 603 Decline / 486 Busy)을 보낸 '수신자'에게
+    PBX 가 직접 ACK 를 보냅니다.
+
+    [왜 필요한가]
+    SIP 규칙상 실패응답에 대한 ACK 는 'hop-by-hop'(구간별) 이라, 응답을 받은 쪽이
+    바로 그 응답을 보낸 쪽에게 ACK 를 돌려줘야 합니다. PBX 가 이 ACK 를 안 보내면
+    수신자(전화기)는 "내 603 을 못 받았나?" 하며 603 을 계속 재전송합니다.
+    (발신자가 보내는 ACK 를 그냥 수신자로 넘기면, 수신자가 트랜잭션 밖 요청으로 보고
+     405 로 거절 -> 무한 재전송 루프가 생깁니다. 그래서 PBX 가 직접 만들어 보냅니다.)
+
+    INVITE 와 '같은 branch' 를 써야 수신자의 INVITE 트랜잭션과 매칭됩니다.
+    """
+    try:
+        ack = sipmsg.SipMessage()
+        ack.method = "ACK"
+        ack.uri = st.get("invite_ruri") or resp.get("To")    # 요청대상 = INVITE 와 동일
+        # Via: INVITE 때 우리가 쓴 branch 그대로 (트랜잭션 매칭)
+        ack.headers.append(("Via", f"SIP/2.0/UDP {MY_IP}:{PORT};branch={st['invite_branch']}"))
+        ack.set("Max-Forwards", "70")
+        if resp.get("From"):
+            ack.headers.append(("From", resp.get("From")))    # 발신자(태그 포함)
+        if resp.get("To"):
+            ack.headers.append(("To", resp.get("To")))        # 수신자(603 이 붙인 태그 포함)
+        if resp.get("Call-ID"):
+            ack.headers.append(("Call-ID", resp.get("Call-ID")))
+        # CSeq 번호는 INVITE 와 같게, 메서드만 ACK 로 (예: "1 INVITE" -> "1 ACK")
+        cseq_num = (resp.get("CSeq") or "1 INVITE").split()[0]
+        ack.headers.append(("CSeq", f"{cseq_num} ACK"))
+        ack.set("Content-Length", "0")
+        sock.sendto(ack.encode(), st["callee"])
+        log.info(f"[ACK] PBX -> {st['callee'][0]} (실패응답 {resp.status_code} 확인, 재전송 중단)")
+    except Exception as e:
+        log.info(f"[!] 실패응답 ACK 생성 오류: {e}")
+
+
 def forward_request(sock, req, src_addr):
     """
     전화 관련 '요청'(INVITE/ACK/BYE/CANCEL)을 상대에게 중계합니다.
@@ -628,14 +665,24 @@ def forward_request(sock, req, src_addr):
         dest = reg["addr"]                       # 상대의 실제 IP/포트
         if reg.get("contact"):
             req.uri = reg["contact"]             # 요청 대상 주소를 상대의 Contact 로 교체
-        branch = gen_branch()
         caller_ext = sipmsg.aor_user(req.get("From"))
         with state_lock:
-            is_new_call = call_id not in calls   # 재전송 INVITE 면 False (중복 푸시 방지용)
-            calls[call_id] = {"caller": src_addr, "callee": dest,
-                              "caller_ext": caller_ext, "callee_ext": callee_ext,
-                              "invite_branch": branch, "answered": False,
-                              "created": time.time()}
+            existing = calls.get(call_id)
+            if existing and not existing.get("ended"):
+                # 재전송된 INVITE: 반드시 '같은 branch' 를 재사용해야 함.
+                # (새 branch 를 주면 수신 단말이 별개의 새 통화로 오인 -> 한쪽을 486 Busy 로
+                #  거절하고, 발신자는 먼저 온 486 으로 통화를 끝내 200 OK 가 무한 재전송됨)
+                branch = existing["invite_branch"]
+                is_new_call = False
+            else:
+                # 진짜 새 통화일 때만 새 branch 생성 + 통화상태 기록
+                branch = gen_branch()
+                is_new_call = True
+                calls[call_id] = {"caller": src_addr, "callee": dest,
+                                  "caller_ext": caller_ext, "callee_ext": callee_ext,
+                                  "invite_branch": branch, "answered": False,
+                                  "invite_ruri": req.uri,   # 실패응답(603 등)의 ACK 를 만들 때 사용
+                                  "created": time.time()}
         reuse_branch = branch
         log.info(f"[INV] {caller_ext}({src_addr[0]}) -> {callee_ext}({dest[0]})")
         # 상대가 앱(FCM 토큰 보유)이면 푸시로 깨움. 새 통화일 때만 1번(재전송 땐 중복 X).
@@ -669,9 +716,13 @@ def forward_request(sock, req, src_addr):
             # CANCEL 은 '취소할 INVITE' 와 같은 branch 여야 상대가 매칭함
             reuse_branch = st.get("invite_branch")
         if method == "ACK" and not st.get("answered"):
-            # 실패응답(예: 487)에 대한 ACK 도 INVITE 와 같은 branch 여야 매칭됨.
-            # (통화 성립된 2xx 의 ACK 는 새 branch 여도 됨)
-            reuse_branch = st.get("invite_branch")
+            # 실패응답(486/603 등)에 대한 ACK 는 hop-by-hop 입니다.
+            # PBX 가 실패응답을 받는 즉시 '수신자'에게 직접 ACK 를 보냈으므로
+            # (forward_response 의 send_nonok_ack 참고), 발신자가 보낸 이 ACK 는
+            # 여기서 '흡수'하고 수신자에게 전달하지 않습니다.
+            # (전달하면 수신자가 트랜잭션 밖 ACK 로 보고 405 로 거절 -> 603 무한 재전송)
+            log.info(f"[ACK] 실패응답 ACK 흡수, 전달 안 함 (call {call_id[:8]})")
+            return
         if method == "BYE":
             with state_lock:
                 calls.pop(call_id, None)         # 통화 종료 -> 상태 제거
@@ -722,6 +773,7 @@ def forward_response(sock, resp):
     #  - 200~299(성공) -> answered=True (연결됨)
     #  - 300 이상(실패) -> ended=True   (취소/거절/통화중/미응답)
     cseq = resp.get("CSeq") or ""
+    nonok_st = None     # 실패응답이면, 수신자에게 직접 ACK 보낼 통화상태(복사본)
     if cseq.endswith("INVITE"):
         cid = resp.get("Call-ID")
         with state_lock:
@@ -730,6 +782,10 @@ def forward_response(sock, resp):
                     calls[cid]["answered"] = True
                 elif resp.status_code >= 300:
                     calls[cid]["ended"] = True
+                    nonok_st = dict(calls[cid])   # lock 밖에서 ACK 만들 때 쓸 복사본
+    # 실패응답(3xx~6xx)이면 수신자에게 PBX 가 직접 ACK 를 보내 재전송을 멈춤
+    if nonok_st is not None:
+        send_nonok_ack(sock, nonok_st, resp)
 
     # 다음 Via(=발신자 쪽)로 응답 전달
     next_via = resp.get("Via")
@@ -940,7 +996,8 @@ def serve_forever(sock):
             forward_response(sock, msg)       # 응답 -> 역방향 중계
         elif msg.method == "REGISTER":
             handle_register(sock, msg, addr)  # 등록 처리
-        elif msg.method in ("INVITE", "ACK", "BYE", "CANCEL"):
+        elif msg.method in ("INVITE", "ACK", "BYE", "CANCEL", "REFER", "NOTIFY", "SUBSCRIBE"):
+            # REFER/NOTIFY = '통화 넘겨주기(전환)'에 필요. 통화 도중 요청이므로 반대편으로 중계.
             forward_request(sock, msg, addr)  # 통화 요청 중계
         else:
             # 그 외 메서드(OPTIONS 등)는 일단 200 OK 로 응답

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  통화중 컨트롤 원형 배경.
+  선택(켜짐) 상태면 밝은(전경색) 원, 평소엔 surface 원.
+  아이콘 색은 코드에서 반전시킴.
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_selected="true">
+        <shape android:shape="oval">
+            <solid android:color="@color/textPrimary" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="oval">
+            <solid android:color="@color/surface" />
+        </shape>
+    </item>
+</selector>

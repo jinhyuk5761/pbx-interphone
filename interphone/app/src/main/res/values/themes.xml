@@ -1,3 +1,12 @@
 <resources>
-    <style name="Theme.Interphone" parent="Theme.Material3.DayNight.NoActionBar" />
+    <!--
+      앱 테마. 다크 배경 고정 + 액션바 없음.
+      상태바/배경을 디자인의 bg(#0F1216)로 통일.
+    -->
+    <style name="Theme.Interphone" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:windowBackground">@color/bg</item>
+        <item name="android:statusBarColor">@color/bg</item>
+        <item name="android:navigationBarColor">@color/bg</item>
+        <item name="colorPrimary">@color/accent</item>
+    </style>
 </resources>

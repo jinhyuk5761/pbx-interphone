@@ -1,89 +1,125 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  activity_incoming.xml — '전화 왔어요' 전체화면 레이아웃.
-  IncomingCallActivity 가 이 화면을 쓰며, 잠금화면 위에 크게 표시됩니다.
-  구성: (위) "전화가 왔습니다" / 📞 / 발신번호 큰 글씨  …  (아래) 거절·받기 큰 버튼.
+  activity_incoming.xml — 수신(전화 옴) 전체화면. 다크 디자인.
+  (위) "수신 전화" / 발신자 / 펄스 원   …   (아래) 거절·수락 원형 버튼.
 -->
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:gravity="center_horizontal"
-    android:background="#0B1E33"
-    android:padding="24dp">
+    android:background="@color/bg"
+    android:paddingHorizontal="22dp"
+    android:paddingTop="64dp"
+    android:paddingBottom="40dp">
 
-    <!-- 안내 문구 -->
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="80dp"
-        android:text="전화가 왔습니다"
-        android:textColor="#9FB7D0"
-        android:textSize="26sp" />
+        android:text="수신 전화"
+        android:textColor="@color/accent"
+        android:textSize="13sp"
+        android:textStyle="bold" />
 
-    <!-- 전화 아이콘(이모지) -->
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="40dp"
-        android:text="📞"
-        android:textSize="96sp" />
-
-    <!-- 발신자 내선번호 (아주 크게; 코드에서 "내선 101" 로 채움) -->
     <TextView
         android:id="@+id/callerText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
+        android:layout_marginTop="12dp"
         android:text="내선 -"
-        android:textColor="#FFFFFF"
-        android:textSize="64sp"
+        android:textColor="@color/textPrimary"
+        android:textSize="30sp"
         android:textStyle="bold" />
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="님이 전화했습니다"
-        android:textColor="#9FB7D0"
-        android:textSize="18sp" />
+        android:layout_marginTop="6dp"
+        android:text="사무실 인터폰"
+        android:textColor="@color/textMuted"
+        android:textSize="13.5sp" />
 
-    <!-- 빈 공간을 모두 차지(weight=1)해서 아래 버튼을 화면 하단으로 밀어냄 -->
+    <!-- 펄스 원 -->
+    <ImageView
+        android:id="@+id/pulse"
+        android:layout_width="96dp"
+        android:layout_height="96dp"
+        android:layout_marginTop="44dp"
+        android:background="@drawable/bg_pulse"
+        android:src="@drawable/ic_call_fill"
+        android:scaleType="fitCenter"
+        android:padding="28dp"
+        android:contentDescription="수신"
+        app:tint="@color/accent" />
+
+    <!-- 아래로 밀기 -->
     <View
-        android:layout_width="0dp"
+        android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1" />
 
-    <!-- 하단 거절(빨강)/받기(초록) 큰 버튼: 가로로 반반(weight=1) -->
+    <!-- 거절 / 수락 -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="72dp"
-        android:orientation="horizontal">
+        android:orientation="horizontal"
+        android:weightSum="2">
 
-        <Button
-            android:id="@+id/rejectButton"
+        <LinearLayout
             android:layout_width="0dp"
-            android:layout_height="88dp"
+            android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:layout_marginEnd="14dp"
-            android:text="✕  거절"
-            android:textSize="22sp"
-            android:textStyle="bold"
-            android:backgroundTint="#D32F2F"
-            android:textColor="#FFFFFF" />
+            android:orientation="vertical"
+            android:gravity="center_horizontal">
+            <ImageView
+                android:id="@+id/rejectButton"
+                android:layout_width="68dp"
+                android:layout_height="68dp"
+                android:background="@drawable/bg_end_btn"
+                android:src="@drawable/ic_call_end_fill"
+                android:scaleType="fitCenter"
+                android:padding="19dp"
+                android:contentDescription="거절"
+                android:clickable="true"
+                android:focusable="true" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="거절"
+                android:textColor="@color/textMuted"
+                android:textSize="12.5sp"
+                android:textStyle="bold" />
+        </LinearLayout>
 
-        <Button
-            android:id="@+id/acceptButton"
+        <LinearLayout
             android:layout_width="0dp"
-            android:layout_height="88dp"
+            android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="✓  받기"
-            android:textSize="22sp"
-            android:textStyle="bold"
-            android:backgroundTint="#2E7D32"
-            android:textColor="#FFFFFF" />
+            android:orientation="vertical"
+            android:gravity="center_horizontal">
+            <ImageView
+                android:id="@+id/acceptButton"
+                android:layout_width="68dp"
+                android:layout_height="68dp"
+                android:background="@drawable/bg_call_btn"
+                android:src="@drawable/ic_call_fill"
+                android:scaleType="fitCenter"
+                android:padding="19dp"
+                android:contentDescription="수락"
+                android:clickable="true"
+                android:focusable="true" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="수락"
+                android:textColor="@color/textMuted"
+                android:textSize="12.5sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
     </LinearLayout>
 
 </LinearLayout>

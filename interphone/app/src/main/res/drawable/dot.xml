@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 등록 상태 점(기본 초록). 색은 코드에서 backgroundTint 로 바꿈. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+    <solid android:color="@color/accent" />
+    <size android:width="7dp" android:height="7dp" />
+</shape>

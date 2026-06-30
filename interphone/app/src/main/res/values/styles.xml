@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  styles.xml — 반복되는 위젯 스타일 모음.
+  키패드 키, 통화중 컨트롤(원형 버튼/라벨) 공통 스타일.
+-->
+<resources>
+
+    <!-- 키패드 숫자 키 -->
+    <style name="DialKey">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">58dp</item>
+        <item name="android:layout_columnWeight">1</item>
+        <item name="android:layout_gravity">fill_horizontal</item>
+        <item name="android:layout_margin">5dp</item>
+        <item name="android:background">@drawable/bg_key</item>
+        <item name="android:gravity">center</item>
+        <item name="android:textColor">@color/keyText</item>
+        <item name="android:textSize">30sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+    </style>
+
+    <!-- 통화중 컨트롤 한 칸(세로: 원형버튼 + 라벨) -->
+    <style name="CtlCell">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginHorizontal">16dp</item>
+        <item name="android:layout_marginVertical">18dp</item>
+        <item name="android:orientation">vertical</item>
+        <item name="android:gravity">center_horizontal</item>
+    </style>
+
+    <!-- 통화중 컨트롤 원형 버튼 -->
+    <style name="CtlKey">
+        <item name="android:layout_width">68dp</item>
+        <item name="android:layout_height">68dp</item>
+        <item name="android:background">@drawable/bg_ctl</item>
+        <item name="android:scaleType">fitCenter</item>
+        <item name="android:padding">19dp</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+    </style>
+
+    <!-- 통화중 컨트롤 라벨 -->
+    <style name="CtlLabel">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">8dp</item>
+        <item name="android:textColor">@color/textMuted</item>
+        <item name="android:textSize">11.5sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+</resources>

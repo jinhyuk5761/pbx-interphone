@@ -1,6 +1,11 @@
 package com.mycompany.interphone
 
 import android.content.Context
+import android.media.AudioManager
+import android.media.ToneGenerator
+import android.os.Handler
+import android.os.Looper
+import android.util.Log
 import org.linphone.core.Account
 import org.linphone.core.AudioDevice
 import org.linphone.core.Call
@@ -29,11 +34,13 @@ import java.util.concurrent.CopyOnWriteArrayList
 object SipManager {
 
     var EXTENSION = "103"                      // 내 내선번호 (사용자가 설정, Prefs 에서 로드)
-    const val SERVER = "192.168.0.112"         // PBX 서버 IP (다른 PC면 여기 변경)
+    const val SERVER = "192.168.0.117"         // PBX 서버 IP (다른 PC면 여기 변경)
     private const val PASSWORD = "linphone"    // 비밀번호 — PBX 가 인증 안 하므로 실제론 미사용
 
     private lateinit var core: Core            // Linphone 핵심 객체 (init 에서 생성)
     private lateinit var appCtx: Context       // 알림/벨 띄울 때 쓸 앱 컨텍스트
+    private const val TAG = "Interphone-SIP"   // logcat 태그
+    private val mainHandler = Handler(Looper.getMainLooper())  // 지연 재라우팅용
 
     // 등록/통화 상태가 바뀔 때 알려줄 '구독자(리스너)' 목록.
     // 화면(MainActivity)·수신화면(IncomingCallActivity) 등이 동시에 구독할 수 있어 목록 사용.
@@ -59,9 +66,21 @@ object SipManager {
         override fun onCallStateChanged(
             core: Core, call: Call, state: Call.State, message: String
         ) {
-            // 통화 음성이 흐르기 시작하면, 이어폰이 연결돼 있으면 이어폰으로 오디오 보냄
+            // 효과음: 전화를 '걸 때' / 통화가 '끊길 때' 짧은 톤 재생
+            when (state) {
+                Call.State.OutgoingInit ->           // 내가 전화를 걸기 시작 → '발신음'
+                    playTone(ToneGenerator.TONE_PROP_BEEP, 150)
+                Call.State.End ->                    // 통화 종료(어느 쪽이든) → '종료음'
+                    playTone(ToneGenerator.TONE_CDMA_PIP, 200)
+                else -> {}
+            }
+            // 통화 음성이 흐르기 시작하면 이어폰으로 라우팅.
+            // Linphone 이 통화 시작 직후 기본 장치로 덮어쓸 수 있어, 즉시 + 0.8초 뒤 한 번 더 적용.
             if (state == Call.State.Connected || state == Call.State.StreamsRunning) {
                 try { routeAudioToHeadset(call) } catch (_: Exception) {}
+                mainHandler.postDelayed({
+                    try { core.currentCall?.let { routeAudioToHeadset(it) } } catch (_: Exception) {}
+                }, 800)
             }
             handleCallUi(state)                       // 수신화면/벨 처리 (서비스 없이 전역에서)
             callListeners.forEach { it(state, message) }  // 화면들에게도 알림
@@ -86,28 +105,60 @@ object SipManager {
     )
 
     /**
-     * 이어폰이 연결돼 있으면 통화 오디오(소리/마이크)를 이어폰으로 보냄.
-     * 이어폰이 없으면 기본(귀에 대는 수화부 Earpiece / 폰 마이크)으로.
+     * 짧은 효과음 재생 (발신/종료음).
+     * ToneGenerator 는 음원 파일 없이 시스템이 내장한 톤을 즉석에서 울려줍니다.
+     * @param toneType ToneGenerator.TONE_* 상수
+     * @param durationMs 길이(밀리초)
+     */
+    private fun playTone(toneType: Int, durationMs: Int) {
+        try {
+            val tg = ToneGenerator(AudioManager.STREAM_MUSIC, 90)   // 음량 0~100
+            tg.startTone(toneType, durationMs)
+            // 톤이 끝난 뒤 자원 해제 (조금 여유를 두고)
+            mainHandler.postDelayed({ try { tg.release() } catch (_: Exception) {} },
+                (durationMs + 200).toLong())
+        } catch (_: Exception) {
+        }
+    }
+
+    /**
+     * 이어폰이 연결돼 있으면 통화 오디오(소리/마이크)를 이어폰으로 강제.
+     * 이어폰이 없으면 아무것도 안 함(기본 수화부 유지).
+     * Linphone 이 덮어쓰는 걸 막기 위해 call 과 core 양쪽에 모두 지정.
      */
     private fun routeAudioToHeadset(call: Call) {
         if (!this::core.isInitialized) return
         val devices = core.audioDevices
+        Log.i(TAG, "오디오 장치: " + devices.joinToString { "${it.type}/${it.deviceName}" })
 
-        // 출력: 이어폰 우선, 없으면 수화부(Earpiece)
+        // 출력 선택 우선순위:
+        //  1) 블루투스 '통화용(SCO/HFP)' — 재생+녹음 둘 다 가능한 Bluetooth (양방향 통화)
+        //  2) 그 외 이어폰(유선/USB/A2DP 등) 중 재생 가능한 것
         val out = devices.firstOrNull {
-            it.hasCapability(AudioDevice.Capabilities.CapabilityPlay) && it.type in HEADSET_OUT
+            it.type == AudioDevice.Type.Bluetooth &&
+                it.hasCapability(AudioDevice.Capabilities.CapabilityPlay)
         } ?: devices.firstOrNull {
-            it.hasCapability(AudioDevice.Capabilities.CapabilityPlay) && it.type == AudioDevice.Type.Earpiece
+            it.hasCapability(AudioDevice.Capabilities.CapabilityPlay) && it.type in HEADSET_OUT
         }
-        if (out != null) call.outputAudioDevice = out
+        if (out == null) {
+            Log.i(TAG, "이어폰 출력 없음 -> 기본 라우팅 유지")
+            return
+        }
+        // 출력을 이어폰으로 (call + core 둘 다)
+        try { call.outputAudioDevice = out } catch (_: Exception) {}
+        try { core.outputAudioDevice = out } catch (_: Exception) {}
 
-        // 입력(마이크): 이어폰 마이크 우선, 없으면 폰 기본 마이크
+        // 입력(마이크): 이어폰 마이크 있으면 그쪽, 없으면 폰 마이크
         val mic = devices.firstOrNull {
             it.hasCapability(AudioDevice.Capabilities.CapabilityRecord) && it.type in HEADSET_IN
         } ?: devices.firstOrNull {
             it.hasCapability(AudioDevice.Capabilities.CapabilityRecord) && it.type == AudioDevice.Type.Microphone
         }
-        if (mic != null) call.inputAudioDevice = mic
+        if (mic != null) {
+            try { call.inputAudioDevice = mic } catch (_: Exception) {}
+            try { core.inputAudioDevice = mic } catch (_: Exception) {}
+        }
+        Log.i(TAG, "이어폰으로 라우팅: ${out.type}/${out.deviceName}")
     }
 
     /**
@@ -140,6 +191,7 @@ object SipManager {
         // 네이티브 링잉 OFF: Linphone 이 직접 울리는 벨은 소리가 작고 진동도 없어서 끔.
         // 대신 우리가 IncomingCallActivity(포그라운드)에서 큰 벨소리 + 진동을 직접 울림.
         try { core.isNativeRingingEnabled = false } catch (_: Exception) {}
+        try { core.ring = "" } catch (_: Exception) {}   // Linphone 내장 벨소리도 끔 (벨소리 완전 제거)
         core.start()                              // 엔진 가동
     }
 
@@ -205,6 +257,67 @@ object SipManager {
     /** 통화 끊기 / 수신 거절. */
     fun hangup() {
         activeCall()?.terminate()
+    }
+
+    /** 마이크 음소거 켜기/끄기. */
+    fun setMicMuted(muted: Boolean) {
+        if (!this::core.isInitialized) return
+        try { activeCall()?.microphoneMuted = muted } catch (_: Exception) {}
+    }
+
+    /** 스피커폰 켜기/끄기. 끄면 이어폰(있으면) 또는 수화부로 되돌림. */
+    fun setSpeaker(on: Boolean) {
+        if (!this::core.isInitialized) return
+        val call = activeCall() ?: return
+        Log.i(TAG, "스피커 ${if (on) "ON" else "OFF"} 요청. 장치: " +
+            core.audioDevices.joinToString { "${it.type}" })
+        try {
+            if (on) {
+                val spk = core.audioDevices.firstOrNull {
+                    it.hasCapability(AudioDevice.Capabilities.CapabilityPlay) &&
+                        it.type == AudioDevice.Type.Speaker
+                }
+                if (spk != null) {
+                    call.outputAudioDevice = spk
+                    core.outputAudioDevice = spk
+                    Log.i(TAG, "스피커로 전환: ${spk.deviceName}")
+                } else {
+                    Log.i(TAG, "스피커 장치를 못 찾음")
+                }
+            } else {
+                // 먼저 수화부로, 이어폰이 연결돼 있으면 그쪽으로 재라우팅
+                val ear = core.audioDevices.firstOrNull {
+                    it.hasCapability(AudioDevice.Capabilities.CapabilityPlay) &&
+                        it.type == AudioDevice.Type.Earpiece
+                }
+                if (ear != null) { call.outputAudioDevice = ear; core.outputAudioDevice = ear }
+                routeAudioToHeadset(call)
+            }
+        } catch (e: Exception) {
+            Log.i(TAG, "스피커 전환 오류: $e")
+        }
+    }
+
+    /**
+     * 통화 넘겨주기(블라인드 전환).
+     * 현재 통화 상대를 ext 내선으로 '돌려줍니다'. REFER 를 보내면 상대가 ext 로 새로 전화를 걸고,
+     * 우리 통화는 끝납니다. (PBX 가 REFER/NOTIFY 를 중계해야 동작)
+     */
+    fun transfer(ext: String) {
+        if (!this::core.isInitialized || ext.isBlank()) return
+        val call = activeCall() ?: return
+        val uri = "sip:${ext.trim()}@$SERVER"
+        Log.i(TAG, "통화 넘겨주기 -> $uri")
+        try {
+            call.transfer(uri)
+        } catch (_: Exception) {
+            try {
+                val addr = Factory.instance().createAddress(uri)
+                if (addr != null) call.transferTo(addr)
+            } catch (e: Exception) {
+                Log.i(TAG, "넘겨주기 오류: $e")
+            }
+        }
     }
 
     /** 지금 진행 중인 통화 객체 (없으면 null). */

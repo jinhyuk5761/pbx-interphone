@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 키패드 버튼 배경: 둥근 사각형 + 누름 효과(ripple) -->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="#33FFFFFF">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/keyBg" />
+            <corners android:radius="16dp" />
+        </shape>
+    </item>
+</ripple>

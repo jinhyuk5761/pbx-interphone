@@ -12,10 +12,16 @@
     <!-- 통화용 — 마이크는 '위험 권한'이라 실행 중 사용자에게 따로 허용을 받아야 함(런타임 요청) -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <!-- 블루투스 이어폰으로 통화음 보내기(SCO/HFP). 안드 12+ 는 BLUETOOTH_CONNECT 가 '위험 권한'이라 런타임 요청 필요 -->
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <!-- 안드 11 이하 호환용(구형 블루투스 권한) -->
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
 
     <!-- 수신 팝업 / 알림 / 진동 (상시 포그라운드 서비스는 제거함 — 전화 수신은 FCM 푸시로) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />        <!-- 알림 표시(안드 13+) -->
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />    <!-- 잠금화면 위 전체화면 -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />       <!-- 다른 앱 위에 표시(전화 오면 즉시 전체화면) -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" /><!-- 절전 예외 -->
     <uses-permission android:name="android.permission.VIBRATE" />                   <!-- 진동 -->
 

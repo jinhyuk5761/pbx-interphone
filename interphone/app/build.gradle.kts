@@ -34,8 +34,8 @@ android {
         applicationId = "com.mycompany.interphone"
         minSdk = 24
         targetSdk = 35
-        versionCode = 15         // Play 업로드마다 1씩 증가시킬 것
-        versionName = "1.5"      // 벨소리 크게+진동 (수신화면 포그라운드에서 직접 울림)
+        versionCode = 17         // Play 업로드마다 1씩 증가시킬 것
+        versionName = "1.7"      // Linphone 내장벨 OFF(벨소리 완전제거) + 이어폰 강제 라우팅
     }
 
     buildFeatures {

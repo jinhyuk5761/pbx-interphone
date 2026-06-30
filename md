@@ -156,3 +156,11 @@ python C:\Users\User\pbx\step3_proxy.py
 - 2026-06-26: FCM 2단계(발송) — PBX 가 firebase-admin 으로 푸시 발송. `pip install firebase-admin`. 키: `pbx-5017e-firebase-adminsdk-fbsvc-0e71872fbb.json`(코드 하드코딩 X, 파일에서 읽음; exe/스크립트 위치 모두 탐색). INVITE→토큰등록 내선 시 data 메시지(type=incoming_call, caller/callee/call_id, android priority high) 발송. 발송 성공/실패 로그. 스크립트+exe 모두 발송 성공 검증.
   - **exe 빌드 시 firebase-admin 번들 플래그 필요**: `--collect-all firebase_admin --collect-all google --copy-metadata firebase_admin --copy-metadata google-api-core`. (이거 빼면 exe 에서 FCM 비활성)
   - 다음 단계: 앱 onMessageReceived 에서 IncomingCallActivity 띄우기 + 외부망(셀룰러) 통화 경로.
+- 2026-06-29: [앱] 수신 벨소리 = 폰 기본 벨소리로 재설정(MediaPlayer 반복) + 통화 효과음 추가(걸 때 OutgoingInit→TONE_PROP_BEEP, 끊을 때 End→TONE_CDMA_PIP, ToneGenerator). 이어폰 라우팅 강화(call+core 양쪽 지정 + 0.8초 뒤 재적용 + 로그).
+- 2026-06-29: [앱][버그수정] **블루투스 이어폰 통화/벨소리** — 매니페스트에 `BLUETOOTH_CONNECT`(+구형 BLUETOOTH/ADMIN maxSdk30) 권한 추가 + 런타임 요청(API31+). 없으면 안드12+ 가 블루투스를 통화 오디오 장치로 못 봐 본체로 나옴. 라우팅이 블루투스 통화용(SCO/HFP, 재생+녹음 가능 Bluetooth) 우선 선택. 수신 벨소리는 블루투스 출력장치 있으면 `setPreferredDevice()`로 강제 출력(USAGE_MEDIA) → 스피커로 새는 것 방지.
+  - 로컬 테스트 설치는 **release APK**(서명 일치)로. 폰에 Play 설치본이 있으면 서명 불일치(INSTALL_FAILED_UPDATE_INCOMPATIBLE)로 한 번 uninstall 필요했음.
+- 2026-06-30: [앱] UI 다크 미니멀 키패드로 리모델링(colors/themes/styles, activity_main 다이얼러+통화중, activity_incoming 펄스+원형버튼, 벡터 아이콘 자체제작). 다이얼 숫자 30sp, 통화중 컨트롤 68dp+간격 확대.
+- 2026-06-30: [앱] 통화중 기능 — 음소거(마이크 뮤트), 스피커폰 전환(AudioDevice.Type.Speaker로 출력 강제+로그). 키패드 버튼=현재 끊고 새 통화(NEW_CALL), 돌려주기=블라인드 전환(REFER, transfer()). pendingAction 으로 다이얼러 재사용.
+- 2026-06-30: [PBX] **통화 넘겨주기 지원** — 디스패치에 REFER/NOTIFY/SUBSCRIBE 추가(통화중 in-dialog 요청이라 forward_request 가 반대편으로 중계). exe 재빌드 필요(전환 동작하려면 PBX도 최신이어야 함).
+- 2026-06-29: [PBX][버그수정] **INVITE 재전송에 매번 새 branch → 수신단말이 별개 통화로 오인(486 Busy 자동) → 200 OK 무한 재전송 → BYE→481**. 원인: forward_request 의 초기 INVITE 처리가 재전송 때도 `gen_branch()` 로 새 branch 생성·통화상태 덮어쓰기. 수정: call_id 가 이미 있고 ended 아니면 기존 `invite_branch` 재사용(통화상태 보존, FCM 재발송 안 함). 진짜 새 통화만 새 branch 생성. **PBX 재시작 필요.**
+- 2026-06-29: [PBX][버그수정] **603 Decline 후 ACK→405 무한 재전송 루프** — 실패응답(non-2xx)의 ACK 는 hop-by-hop. 수정: (1) `send_nonok_ack()` 신설 — PBX 가 3xx~6xx 받는 즉시 수신자에게 INVITE 와 같은 branch 로 ACK 직접 전송(재전송 중단), (2) 발신자가 보낸 실패-ACK 는 PBX 가 흡수(수신자로 전달 안 함; 전달 시 수신자가 트랜잭션 밖 ACK 로 보고 405 거절), (3) 통화상태에 `invite_ruri` 저장해 정확한 ACK 생성. **적용하려면 PBX 재시작 필요.**

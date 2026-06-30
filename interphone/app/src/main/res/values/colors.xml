@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  colors.xml — 앱 전체 색상 토큰 (디자인 핸드오프의 다크 테마 기준)
+  accent(초록)이 강조색. 통화 버튼/상태 점/활성 상태/링크에 사용.
+-->
+<resources>
+    <!-- 강조색(accent) — 초록 기본 -->
+    <color name="accent">#2EB872</color>
+    <color name="accent_dim">#264034</color>   <!-- accent 16% 느낌 (수신 펄스 배경) -->
+
+    <!-- 다크 테마 팔레트 -->
+    <color name="bg">#0F1216</color>
+    <color name="surface">#191D24</color>
+    <color name="surface2">#222831</color>
+    <color name="textPrimary">#F2F4F7</color>
+    <color name="textMuted">#9BA2AD</color>
+    <color name="textTertiary">#6B7078</color>
+    <color name="line">#262B33</color>
+    <color name="keyBg">#1B2027</color>
+    <color name="keyText">#EAEDF1</color>
+
+    <!-- 거절/종료/부재중 빨강 -->
+    <color name="red">#E5484D</color>
+    <color name="white">#FFFFFF</color>
+</resources>
